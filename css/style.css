@@ -38,11 +38,18 @@ body {
   padding: 0;
   border: 0;
   cursor: pointer;
+  background-color: #ccc;
+  overflow: hidden;
+  border-radius: 35px;
 }
 
 .card img {
-  display: block;
+  display: none;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.card.open img {
+  display: block;
 }

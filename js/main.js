@@ -40,6 +40,13 @@ gameBoard.classList.add('game-board');
 app.append(header, gameInfo, gameBoard);
 document.body.append(app);
 
+let firstCard = null;
+let secondCard = null;
+let moves = 0;
+let foundPairs = 0;
+let isLocked = false;
+let mismatchTimeout = null;
+
 /* Create Cards */
 
 const cards = cardImages.flatMap((card, index) => [
@@ -61,18 +68,67 @@ function shuffleCards(cards) {
 
 shuffleCards(cards);
 
+
+
 /* Create Cards */
 
 function createCard(cardData) {
   const card = document.createElement('button');
+
   card.type = 'button';
   card.classList.add('card');
 
   const cardImage = document.createElement('img');
+
   cardImage.src = cardData.image;
   cardImage.alt = 'Cat card';
+  cardImage.classList.add('card-image');
 
   card.append(cardImage);
+
+  card.addEventListener('click', () => {
+    if (isLocked) {
+      return;
+    }
+
+    if (card === firstCard || card === secondCard) {
+      return;
+    }
+
+    card.classList.add('open');
+
+    if (!firstCard) {
+      firstCard = card;
+      return;
+    }
+
+    secondCard = card;
+    moves += 1;
+    movesInfo.textContent = `Moves: ${moves}`;
+
+    if (firstCard.dataset.pairId === secondCard.dataset.pairId) {
+        foundPairs += 1;
+        pairsInfo.textContent = `Pairs: ${foundPairs} / 8`;
+
+        firstCard = null;
+        secondCard = null;
+        return;
+    }
+
+    isLocked = true;
+
+    mismatchTimeout = setTimeout(() => {
+        firstCard.classList.remove('open');
+        secondCard.classList.remove('open');
+
+        firstCard = null;
+        secondCard = null;
+        isLocked = false;
+        mismatchTimeout = null;
+    }, 1000);
+  });
+
+  card.dataset.pairId = cardData.pairId;
 
   return card;
 }
