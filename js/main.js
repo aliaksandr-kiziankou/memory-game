@@ -37,6 +37,9 @@ gameInfo.append(movesInfo, pairsInfo);
 const gameBoard = document.createElement('main');
 gameBoard.classList.add('game-board');
 
+const leaderboardList = document.createElement('ol');
+leaderboardList.classList.add('leaderboard-list');
+
 /* Modal Window */
 
 const modalOverlay = document.createElement('div');
@@ -47,7 +50,7 @@ modal.classList.add('modal');
 
 const modalTitle = document.createElement('h2');
 
-const modalText = document.createElement('p');
+const modalContent = document.createElement('div');
 
 const modalCloseButton = document.createElement('button');
 modalCloseButton.type = 'button';
@@ -59,7 +62,7 @@ modalNewGameButton.textContent = 'New Game';
 
 modal.append(
   modalTitle,
-  modalText,
+  modalContent,
   modalNewGameButton,
   modalCloseButton,
 );
@@ -74,13 +77,18 @@ app.append(modalOverlay);
 
 function openModal(title, text) {
   modalTitle.textContent = title;
-  modalText.textContent = text;
+  modalContent.textContent = text;
+
+  document.body.classList.add('modal-open');
 
   modalOverlay.classList.add('open');
+
+  modalNewGameButton.style.display = 'block';
 }
 
 function closeModal() {
   modalOverlay.classList.remove('open');
+  document.body.classList.remove('modal-open');
 }
 
 modalCloseButton.addEventListener('click', closeModal);
@@ -106,8 +114,8 @@ let moves = 0;
 let foundPairs = 0;
 let isLocked = false;
 let mismatchTimeout = null;
-
-/* Create Cards */
+let victoryTimeout = null;
+let gameFinished = false;
 
 const cards = cardImages.flatMap((card, index) => [
   { id: `${index}-1`, pairId: card.id, image: card.image },
@@ -128,8 +136,6 @@ function shuffleCards(cards) {
 
 shuffleCards(cards);
 
-
-
 /* Create Cards */
 
 function createCard(cardData) {
@@ -138,16 +144,20 @@ function createCard(cardData) {
   card.type = 'button';
   card.classList.add('card');
 
+  const cardBack = document.createElement('span');
+  cardBack.classList.add('card-back');
+
   const cardImage = document.createElement('img');
 
   cardImage.src = cardData.image;
   cardImage.alt = 'Cat card';
   cardImage.classList.add('card-image');
 
+  card.append(cardBack);
   card.append(cardImage);
 
   card.addEventListener('click', () => {
-    if (isLocked) {
+    if (isLocked || gameFinished) {
       return;
     }
 
@@ -167,18 +177,22 @@ function createCard(cardData) {
     movesInfo.textContent = `Moves: ${moves}`;
 
     if (firstCard.dataset.pairId === secondCard.dataset.pairId) {
-        foundPairs += 1;
-        pairsInfo.textContent = `Pairs: ${foundPairs} / 8`;
+      foundPairs += 1;
+      pairsInfo.textContent = `Pairs: ${foundPairs} / 8`;
 
-        if (foundPairs === 8) {
-          setTimeout(() => {
-            openModal('You won!', `Moves: ${moves}`);
-          }, 300);
-        }
+      if (foundPairs === 8 && !gameFinished) {
+        gameFinished = true;
 
-        firstCard = null;
-        secondCard = null;
-        return;
+        victoryTimeout = setTimeout(() => {
+          saveResult();
+          openModal('You won!', `Moves: ${moves}`);
+          victoryTimeout = null;
+        }, 300);
+      }
+
+      firstCard = null;
+      secondCard = null;
+      return;
     }
 
     isLocked = true;
@@ -199,14 +213,18 @@ function createCard(cardData) {
   return card;
 }
 
+/* New Game */
+
 function startNewGame() {
   clearTimeout(mismatchTimeout);
+  clearTimeout(victoryTimeout);
 
   firstCard = null;
   secondCard = null;
   moves = 0;
   foundPairs = 0;
   isLocked = false;
+  gameFinished = false;
   mismatchTimeout = null;
 
   movesInfo.textContent = 'Moves: 0';
@@ -225,3 +243,76 @@ function startNewGame() {
 startNewGame();
 
 newGameButton.addEventListener('click', startNewGame);
+
+/* leader board */
+
+const leaderboardKey = 'memory-game-results';
+
+function saveResult() {
+  const savedResults =
+    JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+
+  const result = {
+    id: crypto.randomUUID(),
+    moves,
+    date: new Date().toISOString(),
+  };
+
+  savedResults.push(result);
+
+  savedResults.sort((a, b) => {
+    if (a.moves !== b.moves) {
+      return a.moves - b.moves;
+    }
+
+    return new Date(a.date) - new Date(b.date);
+  });
+
+  const topResults = savedResults.slice(0, 10);
+
+  localStorage.setItem(leaderboardKey, JSON.stringify(topResults));
+}
+
+function formatDate(date) {
+  const formattedDate = new Date(date);
+
+  const day = String(formattedDate.getDate()).padStart(2, '0');
+  const month = String(formattedDate.getMonth() + 1).padStart(2, '0');
+  const year = formattedDate.getFullYear();
+
+  return `${day}.${month}.${year}`;
+}
+
+function openLeaderboard() {
+  const savedResults =
+    JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+
+  modalTitle.textContent = 'Leaderboard';
+  modalNewGameButton.style.display = 'none';
+
+  if (savedResults.length === 0) {
+    const emptyMessage = document.createElement('p');
+
+    emptyMessage.textContent = 'No results yet.';
+
+    modalContent.replaceChildren(emptyMessage);
+  } else {
+    leaderboardList.replaceChildren();
+
+    savedResults.forEach((result) => {
+      const listItem = document.createElement('li');
+
+      listItem.textContent =
+        `${result.moves} moves — ${formatDate(result.date)}`;
+
+      leaderboardList.append(listItem);
+    });
+
+    modalContent.replaceChildren(leaderboardList);
+  }
+
+  modalOverlay.classList.add('open');
+  document.body.classList.add('modal-open');
+}
+
+leaderboardButton.addEventListener('click', openLeaderboard);
