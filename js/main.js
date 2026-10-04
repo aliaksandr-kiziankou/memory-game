@@ -37,6 +37,66 @@ gameInfo.append(movesInfo, pairsInfo);
 const gameBoard = document.createElement('main');
 gameBoard.classList.add('game-board');
 
+/* Modal Window */
+
+const modalOverlay = document.createElement('div');
+modalOverlay.classList.add('modal-overlay');
+
+const modal = document.createElement('div');
+modal.classList.add('modal');
+
+const modalTitle = document.createElement('h2');
+
+const modalText = document.createElement('p');
+
+const modalCloseButton = document.createElement('button');
+modalCloseButton.type = 'button';
+modalCloseButton.textContent = 'Close';
+
+const modalNewGameButton = document.createElement('button');
+modalNewGameButton.type = 'button';
+modalNewGameButton.textContent = 'New Game';
+
+modal.append(
+  modalTitle,
+  modalText,
+  modalNewGameButton,
+  modalCloseButton,
+);
+
+modalNewGameButton.addEventListener('click', () => {
+  closeModal();
+  startNewGame();
+});
+
+modalOverlay.append(modal);
+app.append(modalOverlay);
+
+function openModal(title, text) {
+  modalTitle.textContent = title;
+  modalText.textContent = text;
+
+  modalOverlay.classList.add('open');
+}
+
+function closeModal() {
+  modalOverlay.classList.remove('open');
+}
+
+modalCloseButton.addEventListener('click', closeModal);
+
+modalOverlay.addEventListener('click', (event) => {
+  if (event.target === modalOverlay) {
+    closeModal();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeModal();
+  }
+});
+
 app.append(header, gameInfo, gameBoard);
 document.body.append(app);
 
@@ -110,6 +170,12 @@ function createCard(cardData) {
         foundPairs += 1;
         pairsInfo.textContent = `Pairs: ${foundPairs} / 8`;
 
+        if (foundPairs === 8) {
+          setTimeout(() => {
+            openModal('You won!', `Moves: ${moves}`);
+          }, 300);
+        }
+
         firstCard = null;
         secondCard = null;
         return;
@@ -133,7 +199,29 @@ function createCard(cardData) {
   return card;
 }
 
-cards.forEach((cardData) => {
-  const card = createCard(cardData);
-  gameBoard.append(card);
-});
+function startNewGame() {
+  clearTimeout(mismatchTimeout);
+
+  firstCard = null;
+  secondCard = null;
+  moves = 0;
+  foundPairs = 0;
+  isLocked = false;
+  mismatchTimeout = null;
+
+  movesInfo.textContent = 'Moves: 0';
+  pairsInfo.textContent = 'Pairs: 0 / 8';
+
+  gameBoard.replaceChildren();
+
+  shuffleCards(cards);
+
+  cards.forEach((cardData) => {
+    const card = createCard(cardData);
+    gameBoard.append(card);
+  });
+}
+
+startNewGame();
+
+newGameButton.addEventListener('click', startNewGame);
