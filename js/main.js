@@ -165,6 +165,10 @@ function createCard(cardData) {
       return;
     }
 
+    if (card.classList.contains('found')) {
+      return;
+    }
+
     card.classList.add('open');
 
     if (!firstCard) {
@@ -177,6 +181,9 @@ function createCard(cardData) {
     movesInfo.textContent = `Moves: ${moves}`;
 
     if (firstCard.dataset.pairId === secondCard.dataset.pairId) {
+      firstCard.classList.add('found');
+      secondCard.classList.add('found');
+
       foundPairs += 1;
       pairsInfo.textContent = `Pairs: ${foundPairs} / 8`;
 
